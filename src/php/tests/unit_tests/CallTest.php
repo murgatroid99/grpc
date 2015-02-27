@@ -49,6 +49,10 @@ class CallTest extends PHPUnit_Framework_TestCase{
                                 Grpc\Timeval::inf_future());
   }
 
+  public function tearDown() {
+    $this->call->cancel();
+  }
+
   /**
    * @expectedException LogicException
    * @expectedExceptionCode Grpc\CALL_ERROR_INVALID_FLAGS

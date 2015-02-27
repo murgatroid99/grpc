@@ -50,9 +50,14 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
             'grpc.ssl_target_name_override' => 'foo.test.google.fr',
             'credentials' => $credentials
          ]);
+    $deadline = Grpc\Timeval::inf_future();
+    $this->call = new Grpc\Call($this->channel,
+                                'dummy_method',
+                                $deadline);
   }
 
   public function tearDown() {
+    $this->call->cancel();
     unset($this->channel);
     unset($this->server);
     unset($this->client_queue);
@@ -63,14 +68,11 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
     $this->server->start();
     $deadline = Grpc\Timeval::inf_future();
     $status_text = 'xyz';
-    $call = new Grpc\Call($this->channel,
-                          'dummy_method',
-                          $deadline);
     $tag = 1;
-    $call->invoke($this->client_queue, $tag, $tag);
+    $this->call->invoke($this->client_queue, $tag, $tag);
     $server_tag = 2;
 
-    $call->writes_done($tag);
+    $this->call->writes_done($tag);
     $event = $this->client_queue->next($deadline);
     $this->assertNotNull($event);
     $this->assertSame(Grpc\FINISH_ACCEPTED, $event->type);
@@ -113,7 +115,6 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
     $this->assertSame(Grpc\FINISHED, $event->type);
     $status = $event->data;
 
-    unset($call);
     unset($server_call);
   }
 
@@ -124,16 +125,16 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
     $reply_text = 'reply:client_server_full_request_response';
     $status_text = 'status:client_server_full_response_text';
 
-    $call = new Grpc\Call($this->channel,
-                          'dummy_method',
-                          $deadline);
+    $this->call = new Grpc\Call($this->channel,
+                                'dummy_method',
+                                $deadline);
     $tag = 1;
-    $call->invoke($this->client_queue, $tag, $tag);
+    $this->call->invoke($this->client_queue, $tag, $tag);
 
     $server_tag = 2;
 
     // the client writes
-    $call->start_write($req_text, $tag);
+    $this->call->start_write($req_text, $tag);
     $event = $this->client_queue->next($deadline);
     $this->assertNotNull($event);
     $this->assertSame(Grpc\WRITE_ACCEPTED, $event->type);
@@ -168,14 +169,14 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
     $this->assertSame(Grpc\CLIENT_METADATA_READ, $event->type);
 
     // the client reads the reply
-    $call->start_read($tag);
+    $this->call->start_read($tag);
     $event = $this->client_queue->next($deadline);
     $this->assertNotNull($event);
     $this->assertSame(Grpc\READ, $event->type);
     $this->assertSame($reply_text, $event->data);
 
     // the client sends writes done
-    $call->writes_done($tag);
+    $this->call->writes_done($tag);
     $event = $this->client_queue->next($deadline);
     $this->assertSame(Grpc\FINISH_ACCEPTED, $event->type);
     $this->assertSame(Grpc\OP_OK, $event->data);
@@ -199,7 +200,6 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
     $this->assertNotNull($event);
     $this->assertSame(Grpc\FINISHED, $event->type);
 
-    unset($call);
     unset($server_call);
   }
 }
