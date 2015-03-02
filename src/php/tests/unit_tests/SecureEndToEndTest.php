@@ -118,6 +118,7 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
     unset($server_call);
   }
 
+  /*
   public function testClientServerFullRequestResponse() {
     $this->server->start();
     $deadline = Grpc\Timeval::inf_future();
@@ -202,4 +203,5 @@ class SecureEndToEndTest extends PHPUnit_Framework_TestCase{
 
     unset($server_call);
   }
+  */
 }

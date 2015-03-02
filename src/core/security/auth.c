@@ -194,6 +194,7 @@ static void call_op(grpc_call_element *elem, grpc_call_element *from_elem,
             bubbleup_error(elem, error_msg);
             gpr_free(error_msg);
           }
+          op->done_cb(op->user_data, GRPC_OP_ERROR);
           break;
         }
       }
