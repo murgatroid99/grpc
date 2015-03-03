@@ -46,6 +46,7 @@
 #include <grpc++/server.h>
 #include <grpc++/server_builder.h>
 #include <grpc++/server_context.h>
+#include <grpc++/server_credentials.h>
 #include <grpc++/status.h>
 #include <gtest/gtest.h>
 #include "src/cpp/server/thread_pool.h"
@@ -60,6 +61,7 @@ DEFINE_int32(port, 0, "Server port.");
 DEFINE_int32(server_threads, 4, "Number of server threads.");
 
 using grpc::CompletionQueue;
+using grpc::InsecureServerCredentials;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
@@ -109,7 +111,7 @@ class AsyncQpsServerTest {
     gpr_join_host_port(&server_address, "::", FLAGS_port);
 
     ServerBuilder builder;
-    builder.AddPort(server_address);
+    builder.AddPort(server_address, InsecureServerCredentials());
 
     builder.RegisterAsyncService(&async_service_);
 
