@@ -33,4 +33,4 @@ set -ex
 # change to grpc repo root
 cd $(dirname $0)/../../src/ruby
 
-rake
+rake suite:idiomatic
