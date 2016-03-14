@@ -68,6 +68,10 @@ typedef struct callback_params {
   grpc_credentials_plugin_metadata_cb callback;
 } callback_params;
 
+typedef struct grpc_rb_proc {
+  VALUE proc;
+} grpc_rb_proc;
+
 static VALUE grpc_rb_call_credentials_callback(VALUE callback_args) {
   VALUE result = rb_hash_new();
   VALUE metadata = rb_funcall(rb_ary_entry(callback_args, 0), rb_intern("call"),
@@ -125,7 +129,7 @@ static void grpc_rb_call_credentials_plugin_get_metadata(
     void *state, grpc_auth_metadata_context context,
     grpc_credentials_plugin_metadata_cb cb, void *user_data) {
   callback_params *params = gpr_malloc(sizeof(callback_params));
-  params->get_metadata = (VALUE)state;
+  params->get_metadata = ((grpc_rb_proc*)state)->proc;
   params->context = context;
   params->user_data = user_data;
   params->callback = cb;
@@ -242,9 +246,12 @@ static VALUE grpc_rb_call_credentials_init(VALUE self, VALUE proc) {
   grpc_rb_call_credentials *wrapper = NULL;
   grpc_call_credentials *creds = NULL;
   grpc_metadata_credentials_plugin plugin;
+  grpc_rb_proc *proc_wrapper = gpr_malloc(sizeof(grpc_rb_proc));
 
   TypedData_Get_Struct(self, grpc_rb_call_credentials,
                        &grpc_rb_call_credentials_data_type, wrapper);
+  proc_wrapper->proc = proc;
+  rb_gc_mark(proc_wrapper->proc);
 
   plugin.get_metadata = grpc_rb_call_credentials_plugin_get_metadata;
   plugin.destroy = grpc_rb_call_credentials_plugin_destroy;
@@ -252,7 +259,7 @@ static VALUE grpc_rb_call_credentials_init(VALUE self, VALUE proc) {
     rb_raise(rb_eTypeError, "Argument to CallCredentials#new must be a proc");
     return Qnil;
   }
-  plugin.state = (void*)proc;
+  plugin.state = (void*)proc_wrapper;
   plugin.type = "";
 
   creds = grpc_metadata_credentials_create_from_plugin(plugin, NULL);
