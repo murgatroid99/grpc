@@ -30,41 +30,23 @@
 require 'grpc/grpc'
 require 'grpc/generic/active_call'
 require 'grpc/generic/service'
+require_relative '../core/time_consts.rb'
 require 'thread'
 
-# A global that contains signals the gRPC servers should respond to.
-$grpc_signals = []
+# A global that indicates whether there has been a signal that should stop
+# the server
+$grpc_terminated_signal = false
 
 # GRPC contains the General RPC module.
 module GRPC
-  # Handles the signals in $grpc_signals.
-  #
-  # @return false if the server should exit, true if not.
-  def handle_signals
-    loop do
-      sig = $grpc_signals.shift
-      case sig
-      when 'INT'
-        return false
-      when 'TERM'
-        return false
-      when nil
-        return true
-      end
-    end
-    true
-  end
-  module_function :handle_signals
-
   # Sets up a signal handler that adds signals to the signal handling global.
   #
   # Signal handlers should do as little as humanly possible.
-  # Here, they just add themselves to $grpc_signals
+  # Here, they just set $grpc_terminated_signal
   #
-  # RpcServer (and later other parts of gRPC) monitors the signals
-  # $grpc_signals in its own non-signal context.
+  # RpcServer monitors $grpc_terminated_signal in a non-signal context
   def trap_signals
-    %w(INT TERM).each { |sig| trap(sig) { $grpc_signals << sig } }
+    %w(INT TERM).each { |sig| trap(sig) { $grpc_terminated_signal = true } }
   end
   module_function :trap_signals
 
@@ -328,20 +310,6 @@ module GRPC
       end
     end
 
-    # Runs the server in its own thread, then waits for signal INT or TERM on
-    # the current thread to terminate it.
-    def run_till_terminated
-      GRPC.trap_signals
-      t = Thread.new { run }
-      wait_till_running
-      loop do
-        sleep SIGNAL_CHECK_PERIOD
-        break unless GRPC.handle_signals
-      end
-      stop
-      t.join
-    end
-
     # handle registration of classes
     #
     # service is either a class that includes GRPC::GenericService and whose
@@ -392,7 +360,7 @@ module GRPC
     #
     # - #running? returns true after this is called, until #stop cause the
     #   the server to stop.
-    def run
+    def run(handle_signals = true)
       @run_mutex.synchronize do
         fail 'cannot run without registering services' if rpc_descs.size.zero?
         @pool.start
@@ -400,7 +368,7 @@ module GRPC
         transition_running_state(:running)
         @run_cond.broadcast
       end
-      loop_handle_server_calls
+      loop_handle_server_calls handle_signals
     end
 
     # Sends RESOURCE_EXHAUSTED if there are too many unprocessed jobs
@@ -427,13 +395,25 @@ module GRPC
     end
 
     # handles calls to the server
-    def loop_handle_server_calls
+    def loop_handle_server_calls(handle_signals = true)
       fail 'not started' if running_state == :not_started
+      GRPC.trap_signals if handle_signals
       loop_tag = Object.new
       while running_state == :running
         begin
-          an_rpc = @server.request_call(@cq, loop_tag, INFINITE_FUTURE)
-          break if (!an_rpc.nil?) && an_rpc.call.nil?
+          if handle_signals
+            # from_relative_time is in TimeConsts
+            deadline = from_relative_time(1)
+          else
+            deadline = INFINITE_FUTURE
+          end
+          an_rpc = @server.request_call(@cq, loop_tag, deadline)
+          # Stop if we got a termination signal and we are handling signals
+          break if handle_signals && $grpc_terminated_signal
+          # Continue if the request timed out
+          next if an_rpc.nil?
+          # Stop if we got a nil call (indicates server is shutting down)
+          break if an_rpc.call.nil?
 
           active_call = new_active_server_call(an_rpc)
           unless active_call.nil?
