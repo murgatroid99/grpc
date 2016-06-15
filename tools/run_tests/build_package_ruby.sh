@@ -44,6 +44,8 @@ cp -r $EXTERNAL_GIT_ROOT/architecture={x86,x64},language=ruby,platform={windows,
 # source distribution package, and only one of them will end up
 # in the artifacts/ directory. They should be all equivalent though.
 
+proto_dir="$base/src/ruby/tools/google"
+
 for arch in {x86,x64}; do
   case $arch in
     x64)
@@ -59,6 +61,7 @@ for arch in {x86,x64}; do
     mkdir -p $output_dir
     cp $input_dir/protoc* $output_dir/
     cp $input_dir/grpc_ruby_plugin* $output_dir/
+    cp $proto_dir $output_dir/
   done
 done
 
