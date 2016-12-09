@@ -184,6 +184,9 @@ function _emitStatusIfDone() {
     } else {
       status = this.received_status;
     }
+    if (status === grpc.status.OK) {
+      this.push(null);
+    }
     this.emit('status', status);
     if (status.code !== grpc.status.OK) {
       var error = new Error(status.details);
@@ -224,11 +227,20 @@ function _read(size) {
     } catch (e) {
       self._readsDone({code: grpc.status.INTERNAL,
                        details: 'Failed to parse server response'});
+      return;
     }
     if (data === null) {
+      /* A null read indicates that no more messages are incoming. Once that
+         happens, the Readable stream is waiting for a push. We delay that push
+         until the call has completed and the status is received, and we only
+         push if the status is OK. This way, the "end" event is only emitted
+         if there is no error, which makes the stream's behavior more consistent
+         with other existing stream implementations. */
+      self.reading = false;
       self._readsDone();
+      return;
     }
-    if (self.push(deserialized) && data !== null) {
+    if (self.push(deserialized)) {
       var read_batch = {};
       read_batch[grpc.opType.RECV_MESSAGE] = true;
       self.call.startBatch(read_batch, readCallback);
@@ -236,15 +248,11 @@ function _read(size) {
       self.reading = false;
     }
   }
-  if (self.finished) {
-    self.push(null);
-  } else {
-    if (!self.reading) {
-      self.reading = true;
-      var read_batch = {};
-      read_batch[grpc.opType.RECV_MESSAGE] = true;
-      self.call.startBatch(read_batch, readCallback);
-    }
+  if (!self.finished && !self.reading) {
+    self.reading = true;
+    var read_batch = {};
+    read_batch[grpc.opType.RECV_MESSAGE] = true;
+    self.call.startBatch(read_batch, readCallback);
   }
 }
 

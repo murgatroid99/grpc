@@ -172,14 +172,12 @@ function serverStreaming(client, done) {
                        arg.response_parameters[resp_index].size);
     resp_index += 1;
   });
-  call.on('end', function() {
+  call.on('status', function(status) {
+    assert.strictEqual(status.code, grpc.status.OK);
     assert.strictEqual(resp_index, 4);
     if (done) {
       done();
     }
-  });
-  call.on('status', function(status) {
-    assert.strictEqual(status.code, grpc.status.OK);
   });
 }
 

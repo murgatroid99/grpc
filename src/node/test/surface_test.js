@@ -697,7 +697,7 @@ describe('Other conditions', function() {
         call.resume();
       }, 10);
     });
-    call.on('end', function() {
+    call.on('status', function() {
       done();
     });
     call.write({});
