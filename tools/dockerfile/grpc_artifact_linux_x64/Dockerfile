@@ -27,6 +27,8 @@ RUN apt-get update && apt-key update && apt-get install -y \
   clang \
   curl \
   gcc \
+  gcc-arm-linux-gnueabihf \
+  g++-arm-linux-gnueabihf \
   gcc-multilib \
   git \
   golang \
