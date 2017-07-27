@@ -58,6 +58,11 @@ void run_expired_timer(uv_timer_t *handle) {
   grpc_timer *timer = (grpc_timer *)handle->data;
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   GPR_ASSERT(timer->pending);
+  if (GRPC_TRACER_ON(grpc_timer_trace)) {
+    gpr_timespec now = gpr_now(GPR_CLOCK_MONOTONIC);
+    gpr_log(GPR_DEBUG, "TIMER %p: FIRE now %" PRId64 ".%09d", timer, now.tv_sec,
+            now.tv_nsec);
+  }
   timer->pending = 0;
   grpc_closure_sched(&exec_ctx, timer->closure, GRPC_ERROR_NONE);
   stop_uv_timer(handle);
@@ -71,12 +76,24 @@ void grpc_timer_init(grpc_exec_ctx *exec_ctx, grpc_timer *timer,
   uv_timer_t *uv_timer;
   timer->closure = closure;
   if (gpr_time_cmp(deadline, now) <= 0) {
+    if (GRPC_TRACER_ON(grpc_timer_trace)) {
+      gpr_log(GPR_DEBUG, "TIMER %p: FIRE IMMEDIATELY deadline %" PRId64
+                         ".%09d  now %" PRId64 ".%09d call %p[%p]",
+              timer, deadline.tv_sec, deadline.tv_nsec, now.tv_sec, now.tv_nsec,
+              closure, closure->cb);
+    }
     timer->pending = 0;
     grpc_closure_sched(exec_ctx, timer->closure, GRPC_ERROR_NONE);
     return;
   }
   timer->pending = 1;
   timeout = (uint64_t)gpr_time_to_millis(gpr_time_sub(deadline, now));
+  if (GRPC_TRACER_ON(grpc_timer_trace)) {
+    gpr_log(GPR_DEBUG, "TIMER %p: SET %" PRId64 ".%09d  now %" PRId64
+                       ".%09d timeout %" PRIu64 "ms call %p[%p]",
+            timer, deadline.tv_sec, deadline.tv_nsec, now.tv_sec, now.tv_nsec,
+            timeout, closure, closure->cb);
+  }
   uv_timer = gpr_malloc(sizeof(uv_timer_t));
   uv_timer_init(uv_default_loop(), uv_timer);
   uv_timer->data = timer;
@@ -89,6 +106,11 @@ void grpc_timer_init(grpc_exec_ctx *exec_ctx, grpc_timer *timer,
 }
 
 void grpc_timer_cancel(grpc_exec_ctx *exec_ctx, grpc_timer *timer) {
+  if (GRPC_TRACER_ON(grpc_timer_trace)) {
+    gpr_timespec now = gpr_now(GPR_CLOCK_MONOTONIC);
+    gpr_log(GPR_DEBUG, "TIMER %p: CANCEL pending=%s now %" PRId64 ".%09d",
+            timer, timer->pending ? "true" : "false", now.tv_sec, now.tv_nsec);
+  }
   if (timer->pending) {
     timer->pending = 0;
     grpc_closure_sched(exec_ctx, timer->closure, GRPC_ERROR_CANCELLED);
@@ -101,7 +123,10 @@ bool grpc_timer_check(grpc_exec_ctx *exec_ctx, gpr_timespec now,
   return false;
 }
 
-void grpc_timer_list_init(gpr_timespec now) {}
+void grpc_timer_list_init(gpr_timespec now) {
+  grpc_register_tracer("timer", &grpc_timer_trace);
+}
+
 void grpc_timer_list_shutdown(grpc_exec_ctx *exec_ctx) {}
 
 void grpc_timer_consume_kick(void) {}
