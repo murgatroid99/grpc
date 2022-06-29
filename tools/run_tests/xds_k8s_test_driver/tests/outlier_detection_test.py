@@ -78,16 +78,19 @@ class OutlierDetectionTest(xds_k8s_testcase.RegularXdsKubernetesTestCase):
 
         rpc_types = [RpcTypeEmptyCall, RpcTypeUnaryCall]
         with self.subTest('10_chosen_server_removed_by_outlier_detection'):
-            test_client.update_config.configure(rpc_types=rpc_types, metadata=(
-                (RpcTypeEmptyCall, 'rpc-behavior',
-                 f'hostname={test_servers[0].pod_name} error-code-2'),
-                (RpcTypeUnaryCall, 'rpc-behavior',
-                 f'hostname={test_servers[0].pod_name} error-code-2')))
+            test_client.update_config.configure(
+                rpc_types=rpc_types,
+                metadata=(
+                    (RpcTypeEmptyCall, 'rpc-behavior',
+                     f'hostname={test_servers[0].pod_name} error-code-2'),
+                    (RpcTypeUnaryCall, 'rpc-behavior',
+                     f'hostname={test_servers[0].pod_name} error-code-2')))
             self.assertRpcsEventuallyGoToGivenServers(test_client,
                                                       test_servers[1:])
 
         with self.subTest('11_ejected_server_returned_after_failures_stopped'):
-            test_client.update_config.configure(rpc_types=rpc_types, metadata=((RpcTypeEmptyCall,),
+            test_client.update_config.configure(rpc_types=rpc_types,
+                                                metadata=((RpcTypeEmptyCall,),
                                                           (RpcTypeUnaryCall,)))
             self.assertRpcsEventuallyGoToGivenServers(test_client, test_servers)
 
