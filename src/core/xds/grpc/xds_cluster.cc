@@ -63,10 +63,12 @@ std::string XdsClusterResource::ToString() const {
         absl::StrCat("common_tls_context=",
                      upstream_tls_context.common_tls_context.ToString()));
   }
-  if (upstream_tls_context.auto_host_sni)
+  if (upstream_tls_context.auto_host_sni) {
     contents.push_back("auto_host_sni=true");
-  if (upstream_tls_context.auto_sni_san_validation)
+  }
+  if (upstream_tls_context.auto_sni_san_validation) {
     contents.push_back("auto_sni_san_validation=true");
+  }
   if (connection_idle_timeout != Duration::Zero()) {
     contents.push_back(absl::StrCat("connection_idle_timeout=",
                                     connection_idle_timeout.ToString()));

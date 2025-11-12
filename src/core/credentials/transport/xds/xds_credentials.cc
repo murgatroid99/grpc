@@ -202,7 +202,7 @@ XdsCredentials::create_security_connector(
         if (xds_certificate_provider->auto_host_sni() &&
             maybe_hostname.has_value()) {
           tls_credentials_options->set_sni_override(maybe_hostname.value());
-        } else if (xds_certificate_provider->sni().length() > 0) {
+        } else if (!xds_certificate_provider->sni().empty()) {
           tls_credentials_options->set_sni_override(
               xds_certificate_provider->sni());
         } else {
