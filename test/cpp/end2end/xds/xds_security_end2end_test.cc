@@ -891,7 +891,7 @@ class XdsSniSecurityTest : public XdsEnd2endTest {
       logical_dns_cluster_resolver_response_generator_;
 };
 
-static grpc_core::EndpointAddressesList CreateAddressListFromPortList(
+grpc_core::EndpointAddressesList CreateAddressListFromPortList(
     const std::vector<int>& ports) {
   grpc_core::EndpointAddressesList addresses;
   for (int port : ports) {
