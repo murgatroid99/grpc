@@ -99,6 +99,10 @@ ABSL_FLAG(absl::optional<double>, grpc_experimental_memory_pressure_threshold,
           "greater than the target pressure.");
 ABSL_FLAG(absl::optional<int32_t>, grpc_chaotic_good_metrics_update_interval_ms,
           {}, "Interval in milliseconds for updating metrics in chaotic good.");
+ABSL_FLAG(absl::optional<int32_t>, grpc_http1_max_body_length, {},
+          "Max body length of HTTP1 requests and responses");
+ABSL_FLAG(absl::optional<int32_t>, grpc_http1_max_headers_length, {},
+          "Max headers length of HTTP1 requests and responses");
 
 namespace grpc_core {
 
@@ -115,6 +119,12 @@ ConfigVars::ConfigVars(const Overrides& overrides)
           LoadConfig(FLAGS_grpc_chaotic_good_metrics_update_interval_ms,
                      "GRPC_CHAOTIC_GOOD_METRICS_UPDATE_INTERVAL_MS",
                      overrides.chaotic_good_metrics_update_interval_ms, 100)),
+      http1_max_body_length_(LoadConfig(
+          FLAGS_grpc_http1_max_body_length, "GRPC_HTTP1_MAX_BODY_LENGTH",
+          overrides.http1_max_body_length, 1048576)),
+      http1_max_headers_length_(LoadConfig(
+          FLAGS_grpc_http1_max_headers_length, "GRPC_HTTP1_MAX_HEADERS_LENGTH",
+          overrides.http1_max_headers_length, 1048576)),
       experimental_target_memory_pressure_(
           LoadConfig(FLAGS_grpc_experimental_target_memory_pressure,
                      "GRPC_EXPERIMENTAL_TARGET_MEMORY_PRESSURE",
@@ -202,6 +212,9 @@ std::string ConfigVars::ToString() const {
       ", experimental_memory_pressure_threshold: ",
       ExperimentalMemoryPressureThreshold(),
       ", chaotic_good_metrics_update_interval_ms: ",
-      ChaoticGoodMetricsUpdateIntervalMs());
+      ChaoticGoodMetricsUpdateIntervalMs(),
+      ", http1_max_body_length: ", Http1MaxBodyLength(),
+      ", http1_max_headers_length: ", Http1MaxHeadersLength());
 }
+
 }  // namespace grpc_core

@@ -37,6 +37,8 @@ class GPR_DLL ConfigVars {
     absl::optional<int32_t> client_channel_backup_poll_interval_ms;
     absl::optional<int32_t> channelz_max_orphaned_nodes;
     absl::optional<int32_t> chaotic_good_metrics_update_interval_ms;
+    absl::optional<int32_t> http1_max_body_length;
+    absl::optional<int32_t> http1_max_headers_length;
     absl::optional<double> experimental_target_memory_pressure;
     absl::optional<double> experimental_memory_pressure_threshold;
     absl::optional<bool> enable_fork_support;
@@ -138,6 +140,10 @@ class GPR_DLL ConfigVars {
   int32_t ChaoticGoodMetricsUpdateIntervalMs() const {
     return chaotic_good_metrics_update_interval_ms_;
   }
+  // Max body length of HTTP1 requests and responses
+  int32_t Http1MaxBodyLength() const { return http1_max_body_length_; }
+  // Max headers length of HTTP1 requests and responses
+  int32_t Http1MaxHeadersLength() const { return http1_max_headers_length_; }
 
  private:
   explicit ConfigVars(const Overrides& overrides);
@@ -146,6 +152,8 @@ class GPR_DLL ConfigVars {
   int32_t client_channel_backup_poll_interval_ms_;
   int32_t channelz_max_orphaned_nodes_;
   int32_t chaotic_good_metrics_update_interval_ms_;
+  int32_t http1_max_body_length_;
+  int32_t http1_max_headers_length_;
   double experimental_target_memory_pressure_;
   double experimental_memory_pressure_threshold_;
   bool enable_fork_support_;

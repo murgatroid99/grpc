@@ -95,3 +95,10 @@ some configuration as environment variables that can be set.
 * grpc_cfstream
   set to 1 to turn on CFStream experiment. With this experiment gRPC uses CFStream API to make TCP
   connections. The option is only available on iOS platform and when macro GRPC_CFSTREAM is defined.
+
+* GRPC_HTTP1_MAX_BODY_LENGTH
+  Default: 1048576
+  Max body length of HTTP1 requests and responses
+
+* GRPC_HTTP1_MAX_HEADERS_LENGTH
+  Default: 1048576

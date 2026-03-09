@@ -24,9 +24,19 @@
 
 #include <algorithm>
 
+#include "src/core/config/config_vars.h"
 #include "src/core/util/grpc_check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+
+static gpr_once http1_limits_once = GPR_ONCE_INIT;
+static int32_t max_body_length = 0;
+static int32_t max_headers_length = 0;
+
+static void init_http1_limits(void) {
+  max_body_length = grpc_core::ConfigVars::Get().GrpcHttp1MaxBodyLength();
+  max_headers_length = grpc_core::ConfigVars::Get().GrpcHttp1MaxHeadersLength();
+}
 
 static char* buf2str(void* buffer, size_t length) {
   char* out = static_cast<char*>(gpr_malloc(length + 1));
@@ -225,6 +235,7 @@ static grpc_error_handle add_header(grpc_http_parser* parser) {
         gpr_realloc(*hdrs, parser->hdr_capacity * sizeof(**hdrs)));
   }
   (*hdrs)[(*hdr_count)++] = hdr;
+  parser->cur_headers_size += parser->cur_line_length;
 
 done:
   if (!error.ok()) {
@@ -333,6 +344,12 @@ static grpc_error_handle addbyte_body(grpc_http_parser* parser, uint8_t byte) {
     GPR_UNREACHABLE_CODE(return GRPC_ERROR_CREATE("Should never reach here"));
   }
 
+  if (*body_length >= max_body_length) {
+    GRPC_TRACE_LOG(http1, ERROR)
+        << "HTTP body max total length (" << max_body_length << ") exceeded";
+    return GRPC_ERROR_CREATE("HTTP body max total length exceeded");
+  }
+
   if (*body_length == parser->body_capacity) {
     parser->body_capacity = std::max(size_t{8}, parser->body_capacity * 3 / 2);
     *body = static_cast<char*>(gpr_realloc(*body, parser->body_capacity));
@@ -378,6 +395,12 @@ static grpc_error_handle addbyte(grpc_http_parser* parser, uint8_t byte,
             << "HTTP header max line length ("
             << GRPC_HTTP_PARSER_MAX_HEADER_LENGTH << ") exceeded";
         return GRPC_ERROR_CREATE("HTTP header max line length exceeded");
+      }
+      if (parser->cur_headers_size + parser->cur_line_length >=
+          max_headers_length) {
+        GRPC_TRACE_LOG(http1, ERROR) << "HTTP headers max total length ("
+                                     << max_headers_length << ") exceeded";
+        return GRPC_ERROR_CREATE("HTTP header max total length exceeded");
       }
       parser->cur_line[parser->cur_line_length] = byte;
       parser->cur_line_length++;
@@ -429,6 +452,7 @@ void grpc_http_response_destroy(grpc_http_response* response) {
 grpc_error_handle grpc_http_parser_parse(grpc_http_parser* parser,
                                          const grpc_slice& slice,
                                          size_t* start_of_body) {
+  gpr_once_init(&http1_limits_once, init_http1_limits);
   for (size_t i = 0; i < GRPC_SLICE_LENGTH(slice); i++) {
     bool found_body_start = false;
     grpc_error_handle err =

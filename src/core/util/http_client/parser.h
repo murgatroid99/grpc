@@ -109,6 +109,7 @@ struct grpc_http_parser {
   uint8_t cur_line[GRPC_HTTP_PARSER_MAX_HEADER_LENGTH];
   size_t cur_line_length;
   size_t cur_line_end_length;
+  size_t cur_headers_size;
 };
 void grpc_http_parser_init(grpc_http_parser* parser, grpc_http_type type,
                            void* request_or_response);

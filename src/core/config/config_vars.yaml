@@ -157,3 +157,11 @@
   type: int
   default: 100
   description: "Interval in milliseconds for updating metrics in chaotic good."
+- name: http1_max_body_length
+  type: int
+  default: 1048576
+  description: "Max body length of HTTP1 requests and responses"
+- name: http1_max_headers_length
+  type: int
+  default: 1048576
+  description: "Max headers length of HTTP1 requests and responses"
