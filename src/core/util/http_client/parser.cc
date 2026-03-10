@@ -34,8 +34,8 @@ static int32_t max_body_length = 0;
 static int32_t max_headers_length = 0;
 
 static void init_http1_limits(void) {
-  max_body_length = grpc_core::ConfigVars::Get().GrpcHttp1MaxBodyLength();
-  max_headers_length = grpc_core::ConfigVars::Get().GrpcHttp1MaxHeadersLength();
+  max_body_length = grpc_core::ConfigVars::Get().Http1MaxBodyLength();
+  max_headers_length = grpc_core::ConfigVars::Get().Http1MaxHeadersLength();
 }
 
 static char* buf2str(void* buffer, size_t length) {
