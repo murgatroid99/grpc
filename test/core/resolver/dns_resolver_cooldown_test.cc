@@ -410,9 +410,7 @@ TEST(DnsResolverCooldownTest, MainTest) {
   // function and overrides the iomgr's g_dns_resolver system. We would need to
   // rewrite this test for EventEngine using a custom EE DNSResolver or adding
   // to the resolver_fuzzer.
-  if (grpc_core::IsEventEngineDnsEnabled()) {
-    GTEST_SKIP() << "Not with event engine dns";
-  }
+  GTEST_SKIP() << "Not with event engine dns";
   grpc_init();
 
   auto work_serializer = std::make_shared<grpc_core::WorkSerializer>(
